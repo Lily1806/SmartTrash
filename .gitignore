@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+*.h5
+*.pt
+*.pkl
+*.pth
+
+# Môi trường
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Database
+*.sqlite
+# Ảnh upload local
+backend/uploaded_images/
+
+# macOS
+.DS_Store

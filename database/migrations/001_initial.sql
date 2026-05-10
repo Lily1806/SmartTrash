@@ -1,0 +1,2 @@
+-- Migration 001: Initial schema
+-- Chạy file smarttrash_schema.sql trước
