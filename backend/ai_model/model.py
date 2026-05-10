@@ -1,18 +1,16 @@
-"""
-Load AI model và thực hiện dự đoán.
-
-Bạn cần sửa file này để phù hợp với model đã train:
-- Nếu dùng TensorFlow/Keras: dùng tf.keras.models.load_model()
-- Nếu dùng PyTorch: dùng torch.load()
-- Nếu dùng scikit-learn: dùng pickle.load()
-"""
 import os
 import numpy as np
 from PIL import Image
 import requests
 from io import BytesIO
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
 
-# Nhãn phân loại — phải khớp với thứ tự lúc train model
+# ==================== CẤU HÌNH ====================
+INPUT_SIZE  = 256
+NUM_CLASSES = 6
+
 LABELS = {
     0: "ORGANIC",
     1: "PLASTIC",
@@ -22,56 +20,85 @@ LABELS = {
     5: "HAZARDOUS"
 }
 
-# ========== THAY ĐỔI PHẦN NÀY ==========
+# Transform ảnh — phải khớp với lúc train
+transform = transforms.Compose([
+    transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],  # Chuẩn ImageNet
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+# ==================== LOAD MODEL ====================
 def load_model():
-    """Load model từ file weights"""
-    model_path = os.path.join(os.path.dirname(__file__), "weights", "waste_classifier.h5")
+    model_path = os.path.join(
+        os.path.dirname(__file__),
+        "weights",
+        "best_resnet50_model1.pth"
+    )
 
-    # Ví dụ dùng TensorFlow/Keras:
-    # import tensorflow as tf
-    # return tf.keras.models.load_model(model_path)
+    if not os.path.exists(model_path):
+        print("⚠️  Chưa có file model — đang dùng chế độ demo")
+        return None
 
-    # Ví dụ dùng PyTorch:
-    # import torch
-    # model = YourModelClass()
-    # model.load_state_dict(torch.load(model_path))
-    # return model
+    try:
+        # Khởi tạo kiến trúc ResNet50
+        model = models.resnet50(weights=None)
 
-    # Tạm thời return None (chưa có model thật)
-    return None
+        # Thay lớp cuối để phù hợp 6 class
+        model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
 
-def preprocess_image(image_url: str) -> np.ndarray:
-    """Tải ảnh từ URL, resize và chuẩn hóa để đưa vào model"""
-    response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content)).convert("RGB")
-    img = img.resize((224, 224))          # Thay đổi kích thước nếu model yêu cầu khác
-    arr = np.array(img) / 255.0           # Chuẩn hóa về [0, 1]
-    return np.expand_dims(arr, axis=0)    # Thêm batch dimension: (1, 224, 224, 3)
+        # Load weights đã train
+        state_dict = torch.load(model_path, map_location=torch.device("cpu"))
 
-# Load model khi server khởi động (không load lại mỗi lần request)
+        # Xử lý trường hợp file lưu cả model lẫn optimizer
+        if isinstance(state_dict, dict):
+            if "model_state_dict" in state_dict:
+                state_dict = state_dict["model_state_dict"]
+            elif "state_dict" in state_dict:
+                state_dict = state_dict["state_dict"]
+            elif "model" in state_dict:
+                state_dict = state_dict["model"]
+
+        model.load_state_dict(state_dict)
+        model.eval()  # Chuyển sang chế độ inference
+        print("✅ Load ResNet50 model thành công!")
+        return model
+
+    except Exception as e:
+        print(f"❌ Lỗi load model: {e}")
+        print("→ Chạy chế độ demo")
+        return None
+
+# Load 1 lần khi server khởi động
 _model = load_model()
 
-def predict(image_url: str) -> tuple[str, float]:
+# ==================== PREDICT ====================
+def preprocess(image_url: str) -> torch.Tensor:
+    """Tải ảnh từ URL, xử lý thành tensor"""
+    response = requests.get(image_url, timeout=10)
+    img = Image.open(BytesIO(response.content)).convert("RGB")
+    tensor = transform(img)
+    return tensor.unsqueeze(0)  # Thêm batch dimension: (1, 3, 256, 256)
+
+def predict(image_url: str) -> tuple:
     """
-    Nhận URL ảnh, trả về (category_code, confidence_score)
-    Ví dụ: ("PLASTIC", 0.9523)
+    Nhận URL ảnh → trả về (category_code, confidence)
+    Ví dụ: ("PLASTIC", 0.9234)
     """
     if _model is None:
-        # Chế độ demo — random kết quả khi chưa có model thật
+        # Chế độ demo khi chưa có model
         import random
         code = random.choice(list(LABELS.values()))
-        conf = round(random.uniform(0.7, 0.99), 4)
+        conf = round(random.uniform(0.70, 0.99), 4)
         return code, conf
 
-    img = preprocess_image(image_url)
+    with torch.no_grad():
+        tensor      = preprocess(image_url)
+        outputs     = _model(tensor)              # shape: (1, 6)
+        probs       = torch.softmax(outputs, dim=1)
+        class_idx   = int(torch.argmax(probs))
+        confidence  = float(probs[0][class_idx])
 
-    # TensorFlow/Keras:
-    # predictions = _model.predict(img)
-    # class_idx = np.argmax(predictions[0])
-    # confidence = float(predictions[0][class_idx])
-
-    # Placeholder:
-    class_idx = 0
-    confidence = 0.95
-    return LABELS[class_idx], confidence
-# ========================================
+    return LABELS[class_idx], round(confidence, 4)

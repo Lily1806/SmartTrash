@@ -4,10 +4,8 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_admin
 from app.core.security import hash_password, verify_password
 from app.models.user import User
-from app.schemas.user import UserResponse
 from pydantic import BaseModel
 from typing import Optional
-import uuid
 
 router = APIRouter()
 
@@ -19,11 +17,16 @@ class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
 
-# ==================== USER ROUTES ====================
-
-@router.get("/me", response_model=UserResponse)
+@router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "avatar_url": current_user.avatar_url,
+        "role": current_user.role.name if current_user.role else "user",
+        "created_at": current_user.created_at,
+    }
 
 @router.put("/me")
 def update_profile(
@@ -36,8 +39,7 @@ def update_profile(
     if data.avatar_url is not None:
         current_user.avatar_url = data.avatar_url
     db.commit()
-    db.refresh(current_user)
-    return {"message": "Cập nhật thành công", "full_name": current_user.full_name}
+    return {"message": "Cập nhật thành công"}
 
 @router.put("/me/password")
 def change_password(
@@ -62,12 +64,9 @@ def delete_account(
     db.commit()
     return {"message": "Tài khoản đã bị vô hiệu hóa"}
 
-# ==================== ADMIN ROUTES ====================
-
 @router.get("/")
 def get_all_users(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = 0, limit: int = 50,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
@@ -95,7 +94,7 @@ def toggle_user_active(
         raise HTTPException(status_code=404, detail="Không tìm thấy user")
     user.is_active = not user.is_active
     db.commit()
-    return {"message": f"User {'kích hoạt' if user.is_active else 'vô hiệu hóa'} thành công", "is_active": user.is_active}
+    return {"message": "Cập nhật thành công", "is_active": user.is_active}
 
 @router.delete("/{user_id}")
 def delete_user(
