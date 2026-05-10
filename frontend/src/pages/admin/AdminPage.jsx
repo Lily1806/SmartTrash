@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom'
 import api from '../../services/api'
 
 export default function AdminPage() {
-  const [users, setUsers]   = useState([])
-  const [cats, setCats]     = useState([])
-  const [tab, setTab]       = useState('users')
-  const [loading, setLoading] = useState(true)
-  const [msg, setMsg]       = useState(null)
-  const [newCat, setNewCat] = useState({ name:'', code:'', color_hex:'#16a34a', tips:'' })
-  const [editCat, setEditCat] = useState(null)
+  const [users, setUsers]       = useState([])
+  const [cats, setCats]         = useState([])
+  const [tab, setTab]           = useState('users')
+  const [loading, setLoading]   = useState(true)
+  const [msg, setMsg]           = useState(null)
+  const [searchUser, setSearchUser] = useState('')
+  const [searchCat, setSearchCat]   = useState('')
+  const [newCat, setNewCat]     = useState({ name:'', code:'', color_hex:'#16a34a', tips:'' })
+  const [editCat, setEditCat]   = useState(null)
 
   const showMsg = (text, ok=true) => {
     setMsg({text,ok})
@@ -22,6 +24,16 @@ export default function AdminPage() {
   useEffect(() => {
     Promise.all([loadUsers(), loadCats()]).finally(()=>setLoading(false))
   }, [])
+
+  const filteredUsers = users.filter(u =>
+    u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+    (u.full_name||'').toLowerCase().includes(searchUser.toLowerCase())
+  )
+
+  const filteredCats = cats.filter(c =>
+    c.name.toLowerCase().includes(searchCat.toLowerCase()) ||
+    c.code.toLowerCase().includes(searchCat.toLowerCase())
+  )
 
   const toggleUser = async (id) => {
     await api.put(`/users/${id}/toggle-active`)
@@ -52,7 +64,7 @@ export default function AdminPage() {
     if (!window.confirm('Xóa loại rác này?')) return
     await api.delete(`/waste-logs/categories/${id}`)
     loadCats()
-    showMsg('Xóa loại rác thành công!')
+    showMsg('Xóa thành công!')
   }
 
   const updateCat = async (e) => {
@@ -73,6 +85,12 @@ export default function AdminPage() {
     background: active ? '#16a34a' : '#f3f4f6',
     color: active ? '#fff' : '#6b7280'
   })
+  const searchBoxStyle = {
+    width:'100%', padding:'9px 14px 9px 36px',
+    border:'1.5px solid #e5e7eb', borderRadius:10,
+    fontSize:13, outline:'none', boxSizing:'border-box',
+    background:'#fff', marginBottom:14
+  }
 
   return (
     <div style={{minHeight:'100vh',background:'#f9fafb'}}>
@@ -88,7 +106,7 @@ export default function AdminPage() {
         <Link to="/" style={{fontSize:13,color:'#6b7280',textDecoration:'none'}}>← Về Dashboard</Link>
       </nav>
 
-      <div style={{maxWidth:900,margin:'0 auto',padding:'32px 24px'}}>
+      <div style={{maxWidth:960,margin:'0 auto',padding:'32px 24px'}}>
         <h2 style={{fontSize:22,fontWeight:700,color:'#111',marginBottom:20}}>Quản trị hệ thống</h2>
 
         {msg && (
@@ -100,54 +118,85 @@ export default function AdminPage() {
         )}
 
         <div style={{display:'flex',gap:8,marginBottom:20}}>
-          <button style={tabStyle(tab==='users')} onClick={()=>setTab('users')}>👥 Người dùng ({users.length})</button>
-          <button style={tabStyle(tab==='cats')}  onClick={()=>setTab('cats')}>🗂️ Loại rác ({cats.length})</button>
+          <button style={tabStyle(tab==='users')} onClick={()=>setTab('users')}>
+            👥 Người dùng ({filteredUsers.length}/{users.length})
+          </button>
+          <button style={tabStyle(tab==='cats')} onClick={()=>setTab('cats')}>
+            🗂️ Loại rác ({filteredCats.length}/{cats.length})
+          </button>
         </div>
 
         {loading ? (
           <div style={{textAlign:'center',padding:'48px',color:'#9ca3af'}}>Đang tải...</div>
         ) : tab === 'users' ? (
-          <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:16,overflow:'hidden'}}>
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
-              <thead>
-                <tr style={{background:'#f9fafb',borderBottom:'1px solid #e5e7eb'}}>
-                  {['Tên','Email','Vai trò','Trạng thái','Ngày tạo','Hành động'].map(h=>(
-                    <th key={h} style={{padding:'12px 16px',textAlign:'left',fontSize:12,fontWeight:600,color:'#6b7280'}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u=>(
-                  <tr key={u.id} style={{borderBottom:'1px solid #f3f4f6'}}>
-                    <td style={{padding:'12px 16px',fontSize:14,fontWeight:500,color:'#111'}}>{u.full_name||'—'}</td>
-                    <td style={{padding:'12px 16px',fontSize:13,color:'#6b7280'}}>{u.email}</td>
-                    <td style={{padding:'12px 16px'}}>
-                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,background:u.role==='admin'?'#fef3c7':'#f0fdf4',color:u.role==='admin'?'#d97706':'#16a34a',fontWeight:600}}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={{padding:'12px 16px'}}>
-                      <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,background:u.is_active?'#f0fdf4':'#fef2f2',color:u.is_active?'#16a34a':'#dc2626',fontWeight:600}}>
-                        {u.is_active?'Hoạt động':'Vô hiệu'}
-                      </span>
-                    </td>
-                    <td style={{padding:'12px 16px',fontSize:13,color:'#9ca3af'}}>{u.created_at}</td>
-                    <td style={{padding:'12px 16px'}}>
-                      <div style={{display:'flex',gap:6}}>
-                        <button onClick={()=>toggleUser(u.id)}
-                          style={{padding:'5px 10px',border:'1px solid #e5e7eb',borderRadius:6,fontSize:12,cursor:'pointer',background:'#fff',color:'#374151'}}>
-                          {u.is_active?'Khóa':'Mở'}
-                        </button>
-                        <button onClick={()=>deleteUser(u.id)}
-                          style={{padding:'5px 10px',border:'1px solid #fecaca',borderRadius:6,fontSize:12,cursor:'pointer',background:'#fff',color:'#dc2626'}}>
-                          Xóa
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <div style={{position:'relative',marginBottom:4}}>
+              <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-60%)',fontSize:15,color:'#9ca3af'}}>🔍</span>
+              <input
+                placeholder="Tìm theo tên hoặc email..."
+                value={searchUser}
+                onChange={e=>setSearchUser(e.target.value)}
+                style={searchBoxStyle}
+                onFocus={e=>e.target.style.borderColor='#16a34a'}
+                onBlur={e=>e.target.style.borderColor='#e5e7eb'}
+              />
+            </div>
+
+            {filteredUsers.length === 0 ? (
+              <div style={{textAlign:'center',padding:'32px',background:'#fff',borderRadius:12,border:'1px solid #e5e7eb',color:'#9ca3af'}}>
+                Không tìm thấy user nào
+              </div>
+            ) : (
+              <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:16,overflow:'hidden'}}>
+                <table style={{width:'100%',borderCollapse:'collapse'}}>
+                  <thead>
+                    <tr style={{background:'#f9fafb',borderBottom:'1px solid #e5e7eb'}}>
+                      {['Tên','Email','Vai trò','Trạng thái','Ngày tạo','Hành động'].map(h=>(
+                        <th key={h} style={{padding:'12px 16px',textAlign:'left',fontSize:12,fontWeight:600,color:'#6b7280'}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map(u=>(
+                      <tr key={u.id} style={{borderBottom:'1px solid #f3f4f6'}}>
+                        <td style={{padding:'12px 16px',fontSize:14,fontWeight:500,color:'#111'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:8}}>
+                            <div style={{width:30,height:30,borderRadius:'50%',background:'#dcfce7',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#16a34a',flexShrink:0}}>
+                              {(u.full_name||u.email)[0].toUpperCase()}
+                            </div>
+                            {u.full_name||'—'}
+                          </div>
+                        </td>
+                        <td style={{padding:'12px 16px',fontSize:13,color:'#6b7280'}}>{u.email}</td>
+                        <td style={{padding:'12px 16px'}}>
+                          <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,background:u.role==='admin'?'#fef3c7':'#f0fdf4',color:u.role==='admin'?'#d97706':'#16a34a',fontWeight:600}}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td style={{padding:'12px 16px'}}>
+                          <span style={{fontSize:11,padding:'2px 8px',borderRadius:99,background:u.is_active?'#f0fdf4':'#fef2f2',color:u.is_active?'#16a34a':'#dc2626',fontWeight:600}}>
+                            {u.is_active?'Hoạt động':'Vô hiệu'}
+                          </span>
+                        </td>
+                        <td style={{padding:'12px 16px',fontSize:13,color:'#9ca3af'}}>{u.created_at}</td>
+                        <td style={{padding:'12px 16px'}}>
+                          <div style={{display:'flex',gap:6}}>
+                            <button onClick={()=>toggleUser(u.id)}
+                              style={{padding:'5px 10px',border:'1px solid #e5e7eb',borderRadius:6,fontSize:12,cursor:'pointer',background:'#fff',color:'#374151'}}>
+                              {u.is_active?'Khóa':'Mở'}
+                            </button>
+                            <button onClick={()=>deleteUser(u.id)}
+                              style={{padding:'5px 10px',border:'1px solid #fecaca',borderRadius:6,fontSize:12,cursor:'pointer',background:'#fff',color:'#dc2626'}}>
+                              Xóa
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
@@ -175,12 +224,15 @@ export default function AdminPage() {
                 ))}
                 <div style={{marginBottom:16}}>
                   <label style={{display:'block',fontSize:12,fontWeight:500,color:'#374151',marginBottom:4}}>Màu sắc</label>
-                  <input type="color"
-                    value={editCat ? editCat.color_hex||'#16a34a' : newCat.color_hex}
-                    onChange={e => editCat
-                      ? setEditCat({...editCat,color_hex:e.target.value})
-                      : setNewCat({...newCat,color_hex:e.target.value})}
-                    style={{width:48,height:36,borderRadius:8,border:'1px solid #e5e7eb',cursor:'pointer'}} />
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <input type="color"
+                      value={editCat ? editCat.color_hex||'#16a34a' : newCat.color_hex}
+                      onChange={e => editCat
+                        ? setEditCat({...editCat,color_hex:e.target.value})
+                        : setNewCat({...newCat,color_hex:e.target.value})}
+                      style={{width:40,height:36,borderRadius:8,border:'1px solid #e5e7eb',cursor:'pointer'}} />
+                    <span style={{fontSize:12,color:'#6b7280'}}>{editCat?editCat.color_hex:newCat.color_hex}</span>
+                  </div>
                 </div>
                 <div style={{display:'flex',gap:8}}>
                   <button type="submit"
@@ -198,10 +250,26 @@ export default function AdminPage() {
             </div>
 
             <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:16,padding:'20px'}}>
-              <p style={{fontSize:14,fontWeight:600,color:'#111',marginBottom:14}}>Danh sách loại rác</p>
-              {cats.map(cat=>(
+              <p style={{fontSize:14,fontWeight:600,color:'#111',marginBottom:10}}>Danh sách loại rác</p>
+              <div style={{position:'relative',marginBottom:12}}>
+                <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'#9ca3af'}}>🔍</span>
+                <input
+                  placeholder="Tìm theo tên hoặc mã..."
+                  value={searchCat}
+                  onChange={e=>setSearchCat(e.target.value)}
+                  style={{...inputStyle, paddingLeft:32}}
+                  onFocus={e=>e.target.style.borderColor='#16a34a'}
+                  onBlur={e=>e.target.style.borderColor='#e5e7eb'}
+                />
+              </div>
+
+              {filteredCats.length === 0 ? (
+                <div style={{textAlign:'center',padding:'20px',color:'#9ca3af',fontSize:13}}>
+                  Không tìm thấy loại rác nào
+                </div>
+              ) : filteredCats.map(cat=>(
                 <div key={cat.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid #f3f4f6'}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:cat.color_hex+'20',border:`1px solid ${cat.color_hex}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:cat.color_hex+'20',border:`1.5px solid ${cat.color_hex}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                     <div style={{width:12,height:12,borderRadius:'50%',background:cat.color_hex}}/>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
