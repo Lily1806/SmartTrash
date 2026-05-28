@@ -1,23 +1,18 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { classifyService } from '../../services/classifyService'
 
 const CATEGORIES = {
-  ORGANIC:   { label: 'Rác hữu cơ',  color: '#16a34a', bg: '#f0fdf4', emoji: '🌿' },
-  PLASTIC:   { label: 'Nhựa',         color: '#2563eb', bg: '#eff6ff', emoji: '♻️' },
-  PAPER:     { label: 'Giấy/Bìa',    color: '#d97706', bg: '#fffbeb', emoji: '📄' },
-  METAL:     { label: 'Kim loại',     color: '#6b7280', bg: '#f9fafb', emoji: '🔩' },
-  GLASS:     { label: 'Thủy tinh',   color: '#0891b2', bg: '#ecfeff', emoji: '🫙' },
-  HAZARDOUS: { label: 'Rác nguy hại',color: '#dc2626', bg: '#fef2f2', emoji: '⚠️' },
+  GLASS:   { label: 'Thủy tinh', color: '#0891b2', bg: '#ecfeff', emoji: '🫙' },
+  METAL:   { label: 'Kim loại',  color: '#6b7280', bg: '#f9fafb', emoji: '🔩' },
+  PAPER:   { label: 'Giấy/Bìa', color: '#d97706', bg: '#fffbeb', emoji: '📄' },
+  PLASTIC: { label: 'Nhựa',      color: '#2563eb', bg: '#eff6ff', emoji: '♻️' },
 }
-
 const TIPS = {
-  ORGANIC:   'Bỏ vào thùng xanh lá. Có thể làm phân compost tại nhà.',
-  PLASTIC:   'Rửa sạch trước khi bỏ thùng tái chế xanh dương.',
-  PAPER:     'Giữ khô ráo, bỏ thùng tái chế. Có thể bán ve chai.',
-  METAL:     'Dẹp lon để tiết kiệm không gian. Bán ve chai được giá.',
-  GLASS:     'Bọc kỹ tránh vỡ. Đem đến điểm thu gom thủy tinh.',
-  HAZARDOUS: '⚠️ KHÔNG vứt chung rác thường! Đem đến điểm thu gom rác nguy hại.',
+  GLASS:   'Bọc kỹ để tránh vỡ. Đem đến điểm thu gom thủy tinh.',
+  METAL:   'Dẹp lon để tiết kiệm không gian. Có thể bán ve chai.',
+  PAPER:   'Giữ khô ráo để tăng giá trị tái chế. Bỏ vào thùng tái chế.',
+  PLASTIC: 'Rửa sạch trước khi bỏ vào thùng tái chế màu xanh dương.',
 }
 
 function Step({ num, label, status }) {
@@ -106,7 +101,7 @@ export default function ClassifyPage() {
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
             </svg>
           </div>
-          SmartTrash
+          GarbageVision
         </div>
         <Link to="/" style={{fontSize:13,color:'#6b7280',textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>
           ← Về Dashboard

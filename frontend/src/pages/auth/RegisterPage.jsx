@@ -36,7 +36,7 @@ export default function RegisterPage() {
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
             </svg>
           </div>
-          <h1 style={{fontSize:32,fontWeight:700,marginBottom:12,letterSpacing:-0.5}}>SmartTrash</h1>
+          <h1 style={{fontSize:32,fontWeight:700,marginBottom:12,letterSpacing:-0.5}}>GarbageVision</h1>
           <p style={{fontSize:16,opacity:0.85,lineHeight:1.6,marginBottom:32}}>
             Tham gia cùng hàng nghìn người dùng đang góp phần bảo vệ môi trường.
           </p>
@@ -65,7 +65,7 @@ export default function RegisterPage() {
               </svg>
             </div>
             <h2 style={{fontSize:24,fontWeight:700,color:'#111',marginBottom:4}}>Tạo tài khoản mới</h2>
-            <p style={{fontSize:14,color:'#6b7280'}}>Bắt đầu hành trình xanh cùng SmartTrash</p>
+            <p style={{fontSize:14,color:'#6b7280'}}>Bắt đầu hành trình xanh cùng GarbageVision</p>
           </div>
 
           <div style={{display:'flex',background:'#f3f4f6',borderRadius:12,padding:4,marginBottom:24}}>

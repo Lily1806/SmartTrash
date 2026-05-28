@@ -7,6 +7,7 @@ import HistoryPage   from './pages/history/HistoryPage'
 import ReportsPage   from './pages/reports/ReportsPage'
 import ProfilePage   from './pages/profile/ProfilePage'
 import AdminPage     from './pages/admin/AdminPage'
+import DatasetPage   from './pages/admin/DatasetPage'
 import { useAuthStore } from './store/authStore'
 
 function PrivateRoute({ children }) {
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/reports"  element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
       <Route path="/profile"  element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/admin"    element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+      <Route path="/dataset"  element={<PrivateRoute><DatasetPage /></PrivateRoute>} />
     </Routes>
   )
 }

@@ -5,8 +5,10 @@ import { authService } from '../../services/authService'
 import { reportService } from '../../services/reportService'
 
 const CATEGORY_COLORS = {
-  ORGANIC:'#16a34a', PLASTIC:'#2563eb', PAPER:'#d97706',
-  METAL:'#6b7280', GLASS:'#0891b2', HAZARDOUS:'#dc2626',
+  GLASS:   '#0891b2',
+  METAL:   '#6b7280',
+  PAPER:   '#d97706',
+  PLASTIC: '#2563eb',
 }
 
 function StatCard({ label, value, unit, color, icon }) {
@@ -75,7 +77,7 @@ export default function DashboardPage() {
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
             </svg>
           </div>
-          SmartTrash
+          GarbageVision
         </div>
 
         <div style={{display:'flex',alignItems:'center',gap:12}}>

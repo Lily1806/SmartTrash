@@ -1,8 +1,6 @@
 {
-  "0": "ORGANIC",
-  "1": "PLASTIC",
+  "0": "GLASS",
+  "1": "METAL",
   "2": "PAPER",
-  "3": "METAL",
-  "4": "GLASS",
-  "5": "HAZARDOUS"
+  "3": "PLASTIC"
 }

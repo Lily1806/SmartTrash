@@ -7,98 +7,111 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 
-# ==================== CẤU HÌNH ====================
 INPUT_SIZE  = 256
-NUM_CLASSES = 6
+NUM_CLASSES = 4
 
 LABELS = {
-    0: "ORGANIC",
-    1: "PLASTIC",
+    0: "GLASS",
+    1: "METAL",
     2: "PAPER",
-    3: "METAL",
-    4: "GLASS",
-    5: "HAZARDOUS"
+    3: "PLASTIC",
 }
 
-# Transform ảnh — phải khớp với lúc train
 transform = transforms.Compose([
     transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],  # Chuẩn ImageNet
+        mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225]
     )
 ])
 
-# ==================== LOAD MODEL ====================
+class CustomResNet50(nn.Module):
+    def __init__(self, num_classes=4):
+        super().__init__()
+        backbone = models.resnet50(weights=None)
+        self.base_model = nn.Sequential(
+            backbone.conv1,
+            backbone.bn1,
+            backbone.relu,
+            backbone.maxpool,
+            backbone.layer1,
+            backbone.layer2,
+            backbone.layer3,
+            backbone.layer4,
+            backbone.avgpool,
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(2048, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.base_model(x)
+        x = self.classifier(x)
+        return x
+
 def load_model():
     model_path = os.path.join(
-        os.path.dirname(__file__),
-        "weights",
-        "best_resnet50_model1.pth"
+        os.path.dirname(__file__), "weights", "best_resnet50_model1.pth"
     )
-
     if not os.path.exists(model_path):
         print("⚠️  Chưa có file model — đang dùng chế độ demo")
         return None
-
     try:
-        # Khởi tạo kiến trúc ResNet50
-        model = models.resnet50(weights=None)
-
-        # Thay lớp cuối để phù hợp 6 class
-        model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
-
-        # Load weights đã train
+        model = CustomResNet50(num_classes=NUM_CLASSES)
         state_dict = torch.load(model_path, map_location=torch.device("cpu"))
-
-        # Xử lý trường hợp file lưu cả model lẫn optimizer
-        if isinstance(state_dict, dict):
-            if "model_state_dict" in state_dict:
-                state_dict = state_dict["model_state_dict"]
-            elif "state_dict" in state_dict:
-                state_dict = state_dict["state_dict"]
-            elif "model" in state_dict:
-                state_dict = state_dict["model"]
-
         model.load_state_dict(state_dict)
-        model.eval()  # Chuyển sang chế độ inference
-        print("✅ Load ResNet50 model thành công!")
+        model.eval()
+        print("✅ Load model thành công!")
         return model
-
     except Exception as e:
         print(f"❌ Lỗi load model: {e}")
-        print("→ Chạy chế độ demo")
         return None
 
-# Load 1 lần khi server khởi động
 _model = load_model()
 
-# ==================== PREDICT ====================
-def preprocess(image_url: str) -> torch.Tensor:
-    """Tải ảnh từ URL, xử lý thành tensor"""
-    response = requests.get(image_url, timeout=10)
-    img = Image.open(BytesIO(response.content)).convert("RGB")
+def preprocess_from_url(image_url: str) -> torch.Tensor:
+    """Tải ảnh từ URL hoặc đọc từ file local nếu là localhost"""
+    try:
+        if "localhost" in image_url or "127.0.0.1" in image_url:
+            # Đọc thẳng từ file local — không cần server đang chạy
+            filename = image_url.split("/images/")[-1]
+            local_path = os.path.join(
+                os.path.dirname(__file__), "..", "uploaded_images", filename
+            )
+            local_path = os.path.normpath(local_path)
+            img = Image.open(local_path).convert("RGB")
+        else:
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            img = Image.open(BytesIO(response.content)).convert("RGB")
+    except Exception as e:
+        raise ValueError(f"Không thể tải ảnh: {e}")
+
     tensor = transform(img)
-    return tensor.unsqueeze(0)  # Thêm batch dimension: (1, 3, 256, 256)
+    return tensor.unsqueeze(0)
 
 def predict(image_url: str) -> tuple:
-    """
-    Nhận URL ảnh → trả về (category_code, confidence)
-    Ví dụ: ("PLASTIC", 0.9234)
-    """
     if _model is None:
-        # Chế độ demo khi chưa có model
         import random
         code = random.choice(list(LABELS.values()))
         conf = round(random.uniform(0.70, 0.99), 4)
         return code, conf
 
     with torch.no_grad():
-        tensor      = preprocess(image_url)
-        outputs     = _model(tensor)              # shape: (1, 6)
-        probs       = torch.softmax(outputs, dim=1)
-        class_idx   = int(torch.argmax(probs))
-        confidence  = float(probs[0][class_idx])
+        tensor     = preprocess_from_url(image_url)
+        outputs    = _model(tensor)
+        probs      = torch.softmax(outputs, dim=1)
+        class_idx  = int(torch.argmax(probs))
+        confidence = float(probs[0][class_idx])
 
     return LABELS[class_idx], round(confidence, 4)
